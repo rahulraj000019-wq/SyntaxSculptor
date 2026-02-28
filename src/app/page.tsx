@@ -10,7 +10,10 @@ import {
   CheckCircle2, 
   Loader2,
   Info,
-  BookOpen
+  BookOpen,
+  Sparkles,
+  ChevronRight,
+  Maximize2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -21,6 +24,7 @@ import { Lexer, LexicalError } from '@/lib/compiler/lexer';
 import { Parser, SyntaxError } from '@/lib/compiler/parser';
 import { explainCompilerErrors, AIErrorExplanationOutput } from '@/ai/flows/ai-error-explanation';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { cn } from '@/lib/utils';
 
 const DEFAULT_CODE = `int x;
 int y;
@@ -45,7 +49,6 @@ export default function SyntaxSculptorPage() {
   
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
 
-  // Automatically scroll to the bottom of the diagnostics panel when compilation finishes or AI analysis updates
   useEffect(() => {
     if (status !== 'idle' || isCompiling || aiAnalysis) {
       const timer = setTimeout(() => {
@@ -60,8 +63,7 @@ export default function SyntaxSculptorPage() {
     setAiAnalysis(null);
     setStatus('idle');
 
-    // Artificial delay for UX "compiling" feedback
-    await new Promise(resolve => setTimeout(resolve, 600));
+    await new Promise(resolve => setTimeout(resolve, 800));
 
     const lexer = new Lexer(code);
     const parser = new Parser(lexer);
@@ -102,122 +104,185 @@ export default function SyntaxSculptorPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background selection:bg-secondary/30">
+    <div className="min-h-screen flex flex-col bg-[#F8FAFC] selection:bg-secondary/20 font-body">
       {/* Navbar */}
-      <header className="border-b bg-card/50 backdrop-blur-md sticky top-0 z-10 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="bg-primary p-2 rounded-lg">
+      <header className="border-b bg-white/80 backdrop-blur-xl sticky top-0 z-20 px-8 py-4 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="bg-primary p-2.5 rounded-xl shadow-lg shadow-primary/20 rotate-3 transition-transform hover:rotate-0">
             <Code2 className="text-primary-foreground h-6 w-6" />
           </div>
           <div>
-            <h1 className="font-headline text-xl font-bold tracking-tight text-primary">SyntaxSculptor</h1>
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Educational Mini Compiler</p>
+            <h1 className="font-headline text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              SyntaxSculptor
+            </h1>
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-secondary animate-pulse" />
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em]">Educational Mini Compiler</p>
+            </div>
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleClear} className="gap-2">
-            <Trash2 className="h-4 w-4" /> Clear
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={handleClear} className="gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/5 font-semibold">
+            <Trash2 className="h-4 w-4" /> Reset
           </Button>
-          <Button onClick={handleCompile} disabled={isCompiling} className="gap-2 shadow-sm">
-            {isCompiling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
-            Compile
+          <Button 
+            onClick={handleCompile} 
+            disabled={isCompiling} 
+            className="gap-2 px-6 shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all font-bold"
+          >
+            {isCompiling ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Play className="h-4 w-4 fill-current" />
+            )}
+            Compile Analysis
           </Button>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-hidden max-h-[calc(100vh-80px)]">
+      <main className="flex-1 p-8 grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-[1600px] mx-auto w-full">
         
-        {/* Code Editor Panel */}
-        <Card className="flex flex-col overflow-hidden border-2 border-border/50 shadow-lg">
-          <CardHeader className="bg-muted/30 py-3 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-sm font-headline uppercase tracking-widest text-muted-foreground">Source Code Input</CardTitle>
-            </div>
+        {/* Editor Panel */}
+        <div className="flex flex-col space-y-4">
+          <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="font-code text-[10px]">C-LIKE LL(1)</Badge>
+              <div className="h-2 w-2 rounded-full bg-primary/40" />
+              <h3 className="text-sm font-headline font-bold uppercase tracking-wider text-muted-foreground">Source Code</h3>
             </div>
-          </CardHeader>
-          <CardContent className="flex-1 p-0 relative">
-            <textarea
-              className="w-full h-full p-6 code-editor bg-card text-foreground focus:outline-none resize-none text-base leading-relaxed"
-              spellCheck={false}
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="// Write your C-like code here..."
-            />
-          </CardContent>
-        </Card>
+            <Badge variant="outline" className="font-code text-[10px] border-primary/20 bg-primary/5 text-primary">
+              LL(1) GRAMMAR
+            </Badge>
+          </div>
+          
+          <Card className="flex-1 flex flex-col overflow-hidden border-none shadow-2xl ring-1 ring-black/5 bg-white relative group">
+            <div className="absolute left-0 top-0 bottom-0 w-12 bg-muted/30 border-r flex flex-col items-center pt-6 space-y-3 select-none">
+              {[...Array(15)].map((_, i) => (
+                <span key={i} className="text-[10px] font-code text-muted-foreground/50 font-medium">{i + 1}</span>
+              ))}
+            </div>
+            <CardContent className="flex-1 p-0 pl-12 relative h-[600px]">
+              <textarea
+                className="w-full h-full p-6 code-editor bg-transparent text-foreground focus:outline-none resize-none text-base leading-relaxed selection:bg-secondary/30"
+                spellCheck={false}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="// Define variables and logic here..."
+              />
+              <div className="absolute right-4 bottom-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Maximize2 className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-primary" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Diagnostic Panel */}
-        <Card className="flex flex-col overflow-hidden border-2 border-border/50 shadow-lg bg-card/80">
-          <CardHeader className="bg-muted/30 py-3 flex flex-row items-center justify-between">
+        <div className="flex flex-col space-y-4">
+          <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-2">
-              <Terminal className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-headline uppercase tracking-widest text-muted-foreground">Diagnostics Panel</CardTitle>
+              <Terminal className="h-4 w-4 text-primary/60" />
+              <h3 className="text-sm font-headline font-bold uppercase tracking-wider text-muted-foreground">Diagnostics</h3>
             </div>
             {status !== 'idle' && (
-              <Badge variant={status === 'success' ? 'default' : 'destructive'} className="animate-in fade-in zoom-in duration-300">
-                {status === 'success' ? 'Compilation Successful' : `Found ${errors.length} Error${errors.length > 1 ? 's' : ''}`}
+              <Badge 
+                variant={status === 'success' ? 'secondary' : 'destructive'} 
+                className={cn(
+                  "px-3 py-1 font-bold animate-in fade-in zoom-in",
+                  status === 'success' ? "bg-secondary text-white border-none" : ""
+                )}
+              >
+                {status === 'success' ? 'Success' : `${errors.length} Issue${errors.length > 1 ? 's' : ''}`}
               </Badge>
             )}
-          </CardHeader>
-          <CardContent className="flex-1 p-0 flex flex-col">
-            <ScrollArea className="flex-1 p-6">
+          </div>
+
+          <Card className="flex-1 flex flex-col overflow-hidden border-none shadow-2xl ring-1 ring-black/5 bg-white/50 backdrop-blur-sm h-[600px]">
+            <ScrollArea className="flex-1 px-6 pt-6">
               {status === 'idle' && !isCompiling && (
-                <div className="h-full flex flex-col items-center justify-center text-center space-y-4 py-20 opacity-60">
-                  <div className="bg-muted p-4 rounded-full">
-                    <BookOpen className="h-10 w-10 text-muted-foreground" />
+                <div className="h-full min-h-[500px] flex flex-col items-center justify-center text-center space-y-6 opacity-40 group">
+                  <div className="relative">
+                    <div className="absolute -inset-4 bg-muted rounded-full blur-2xl group-hover:bg-primary/20 transition-colors" />
+                    <BookOpen className="h-16 w-16 text-muted-foreground relative" />
                   </div>
-                  <div className="space-y-1">
-                    <p className="font-headline font-semibold">Ready to parse</p>
-                    <p className="text-sm text-muted-foreground max-w-xs">Enter your code and click compile to start the analysis.</p>
+                  <div className="space-y-2 relative">
+                    <p className="font-headline font-bold text-xl text-primary/80">Awaiting Input</p>
+                    <p className="text-sm text-muted-foreground max-w-[280px] leading-relaxed font-medium">
+                      Sculpt your logic in the editor and initiate a compilation to see the underlying architecture.
+                    </p>
                   </div>
                 </div>
               )}
 
               {isCompiling && (
-                <div className="h-full flex flex-col items-center justify-center text-center space-y-4 py-20">
-                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                  <p className="font-headline font-medium animate-pulse">Running Lexical & Syntax analysis...</p>
+                <div className="h-full min-h-[500px] flex flex-col items-center justify-center text-center space-y-6">
+                  <div className="relative">
+                    <div className="absolute -inset-4 bg-primary/10 rounded-full animate-ping" />
+                    <Loader2 className="h-12 w-12 animate-spin text-primary relative" />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-headline font-bold text-lg animate-pulse tracking-wide uppercase">Analyzing Semantics</p>
+                    <p className="text-xs text-muted-foreground font-bold">LEXICAL • SYNTAX • CONTEXT</p>
+                  </div>
                 </div>
               )}
 
               {status === 'success' && (
-                <div className="bg-secondary/10 border border-secondary/20 p-6 rounded-xl space-y-4 animate-in slide-in-from-bottom-2 duration-500">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="h-8 w-8 text-secondary" />
-                    <div>
-                      <h3 className="font-headline font-bold text-lg">Build Success</h3>
-                      <p className="text-sm text-muted-foreground">No lexical or syntax errors were found in the provided code.</p>
+                <div className="space-y-6 pb-6">
+                  <div className="bg-secondary/5 border border-secondary/20 p-8 rounded-[2rem] space-y-6 animate-in slide-in-from-bottom-4 duration-700">
+                    <div className="flex items-start gap-5">
+                      <div className="bg-secondary p-3 rounded-2xl shadow-lg shadow-secondary/20">
+                        <CheckCircle2 className="h-8 w-8 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-headline font-bold text-2xl text-secondary-foreground/90">Architecture Validated</h3>
+                        <p className="text-sm text-muted-foreground mt-1 font-medium">Your source code adheres perfectly to the compiler grammar rules.</p>
+                      </div>
+                    </div>
+                    
+                    <Separator className="bg-secondary/10" />
+                    
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Algorithm</p>
+                        <p className="text-sm font-bold text-secondary-foreground/80">LL(1) Recursive Descent</p>
+                      </div>
+                      <div className="space-y-1.5 text-right">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Status</p>
+                        <Badge variant="outline" className="border-secondary/30 text-secondary bg-secondary/5">CLEAN BUILD</Badge>
+                      </div>
                     </div>
                   </div>
-                  <Separator />
-                  <div className="space-y-2">
-                    <p className="text-xs font-headline font-bold uppercase tracking-widest text-muted-foreground">Summary</p>
-                    <ul className="text-sm space-y-1 text-foreground/80 font-medium">
-                      <li className="flex justify-between"><span>Grammar:</span> <span className="font-code">LL(1) Recursive Descent</span></li>
-                      <li className="flex justify-between"><span>Recovery Mode:</span> <span className="font-code">Panic Mode Active</span></li>
-                    </ul>
+
+                  <div className="px-4 py-2 flex items-center gap-2 text-muted-foreground">
+                    <Sparkles className="h-4 w-4 text-secondary" />
+                    <p className="text-xs font-bold uppercase tracking-wider">Analysis complete &bull; Ready for execution</p>
                   </div>
                 </div>
               )}
 
               {status === 'failed' && (
-                <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-500">
-                  <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-xl flex items-center gap-3">
-                    <AlertCircle className="h-6 w-6 text-destructive" />
-                    <p className="text-sm font-medium text-destructive">Compilation failed. See details below.</p>
+                <div className="space-y-8 pb-8 animate-in slide-in-from-bottom-4 duration-500">
+                  <div className="bg-destructive/5 border border-destructive/10 p-6 rounded-2xl flex items-center gap-4">
+                    <div className="bg-destructive/10 p-2 rounded-lg">
+                      <AlertCircle className="h-6 w-6 text-destructive" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-destructive tracking-tight">Compilation Halted</p>
+                      <p className="text-xs text-destructive/70 font-medium">Detected {errors.length} logical inconsistencies.</p>
+                    </div>
                   </div>
 
                   <div className="space-y-4">
-                    <h3 className="font-headline font-bold flex items-center gap-2">
-                      Structured Report
-                      <Badge variant="outline" className="text-[10px]">{errors.length}</Badge>
-                    </h3>
+                    <div className="flex items-center justify-between px-1">
+                      <h3 className="font-headline font-extrabold text-lg flex items-center gap-2 text-primary/80">
+                        Detailed Insights
+                        <span className="text-muted-foreground/30 font-thin">/</span>
+                        <span className="text-sm text-muted-foreground font-medium">{errors.length}</span>
+                      </h3>
+                    </div>
                     
-                    <Accordion type="single" collapsible className="w-full space-y-3">
+                    <Accordion type="single" collapsible className="w-full space-y-4">
                       {errors.map((error, idx) => {
                         const enhanced = aiAnalysis?.enhancedErrors.find(
                           ae => ae.line === error.line && ae.originalMessage === error.message
@@ -227,52 +292,71 @@ export default function SyntaxSculptorPage() {
                           <AccordionItem 
                             key={idx} 
                             value={`error-${idx}`}
-                            className="border rounded-xl bg-card px-4"
+                            className="border-none rounded-2xl bg-white shadow-sm ring-1 ring-black/5 overflow-hidden transition-all hover:shadow-md"
                           >
-                            <AccordionTrigger className="hover:no-underline py-4">
-                              <div className="flex items-center gap-4 text-left">
-                                <span className="bg-muted px-2 py-1 rounded text-xs font-code font-bold">Line {error.line}</span>
-                                <span className="font-medium text-sm line-clamp-1">{error.message}</span>
+                            <AccordionTrigger className="hover:no-underline px-6 py-5 group">
+                              <div className="flex items-center gap-5 text-left w-full">
+                                <div className="bg-muted px-3 py-1.5 rounded-lg text-[10px] font-code font-black text-muted-foreground">
+                                  LINE {error.line}
+                                </div>
+                                <div className="flex-1">
+                                  <span className="font-bold text-sm tracking-tight text-foreground/80 line-clamp-1">{error.message}</span>
+                                </div>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground/40 transition-transform group-data-[state=open]:rotate-90" />
                               </div>
                             </AccordionTrigger>
-                            <AccordionContent className="pb-4 space-y-4 border-t pt-4">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <p className="text-[10px] font-headline font-bold uppercase tracking-widest text-muted-foreground mb-1">Error Type</p>
-                                  <Badge variant="outline">{error.type}</Badge>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] font-headline font-bold uppercase tracking-widest text-muted-foreground mb-1">Status</p>
-                                  <Badge className="bg-yellow-500 hover:bg-yellow-600">Recovered (Panic Mode)</Badge>
-                                </div>
+                            <AccordionContent className="px-6 pb-6 space-y-6">
+                              <div className="flex gap-4">
+                                <Badge variant="secondary" className="bg-muted/50 text-muted-foreground border-none font-bold text-[10px]">
+                                  {error.type.toUpperCase()} ERROR
+                                </Badge>
+                                <Badge className="bg-primary/5 text-primary border-none font-bold text-[10px] hover:bg-primary/10">
+                                  AUTO-RECOVERED
+                                </Badge>
                               </div>
 
                               {enhanced ? (
-                                <div className="bg-primary/5 rounded-lg p-4 space-y-3 border border-primary/10">
-                                  <div className="flex items-center gap-2 text-primary">
-                                    <Info className="h-4 w-4" />
-                                    <h4 className="font-headline font-bold text-sm">AI Explanation</h4>
+                                <div className="space-y-6 animate-in fade-in slide-in-from-top-2">
+                                  <div className="space-y-3">
+                                    <div className="flex items-center gap-2 text-primary/80">
+                                      <Sparkles className="h-4 w-4 text-secondary" />
+                                      <h4 className="font-headline font-bold text-sm uppercase tracking-wide">Contextual Explanation</h4>
+                                    </div>
+                                    <p className="text-sm text-foreground/80 leading-relaxed font-medium">
+                                      {enhanced.explanation}
+                                    </p>
                                   </div>
-                                  <p className="text-sm text-foreground/90 leading-relaxed">{enhanced.explanation}</p>
                                   
-                                  <div className="space-y-2">
-                                    <h5 className="text-[10px] font-headline font-bold uppercase tracking-widest text-muted-foreground">Potential Causes</h5>
-                                    <ul className="text-xs space-y-1 list-disc list-inside text-foreground/80">
-                                      {enhanced.potentialCauses.map((cause, cIdx) => <li key={cIdx}>{cause}</li>)}
-                                    </ul>
-                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="bg-muted/30 p-4 rounded-xl space-y-2 border border-muted-foreground/5">
+                                      <h5 className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground">Potential Root Causes</h5>
+                                      <ul className="space-y-1.5">
+                                        {enhanced.potentialCauses.map((cause, cIdx) => (
+                                          <li key={cIdx} className="text-xs text-foreground/70 font-semibold flex items-center gap-2">
+                                            <div className="h-1 w-1 rounded-full bg-primary/30" />
+                                            {cause}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
 
-                                  <div className="space-y-2">
-                                    <h5 className="text-[10px] font-headline font-bold uppercase tracking-widest text-muted-foreground">Suggestions</h5>
-                                    <ul className="text-xs space-y-1 list-disc list-inside text-foreground/80">
-                                      {enhanced.suggestions.map((sug, sIdx) => <li key={sIdx}>{sug}</li>)}
-                                    </ul>
+                                    <div className="bg-secondary/5 p-4 rounded-xl space-y-2 border border-secondary/10">
+                                      <h5 className="text-[10px] font-black uppercase tracking-[0.15em] text-secondary/70">Actionable Fixes</h5>
+                                      <ul className="space-y-1.5">
+                                        {enhanced.suggestions.map((sug, sIdx) => (
+                                          <li key={sIdx} className="text-xs text-foreground/70 font-semibold flex items-center gap-2">
+                                            <div className="h-1 w-1 rounded-full bg-secondary/30" />
+                                            {sug}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
                                   </div>
                                 </div>
                               ) : (
-                                <div className="flex items-center gap-2 text-muted-foreground py-4 justify-center animate-pulse">
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                  <span className="text-xs font-medium">Fetching AI enhanced diagnosis...</span>
+                                <div className="flex flex-col items-center gap-3 py-10 justify-center">
+                                  <Loader2 className="h-6 w-6 animate-spin text-primary/30" />
+                                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground animate-pulse">Consulting AI Model</span>
                                 </div>
                               )}
                             </AccordionContent>
@@ -283,29 +367,39 @@ export default function SyntaxSculptorPage() {
                   </div>
                 </div>
               )}
-              {/* Invisible anchor used for auto-scrolling */}
               <div ref={scrollAnchorRef} className="h-px w-full" />
             </ScrollArea>
-          </CardContent>
-          <CardFooter className="bg-muted/10 border-t p-3">
-             <div className="flex items-center gap-6 text-[10px] font-headline font-bold uppercase tracking-widest text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-secondary" />
-                  Lexical: {status === 'idle' ? '-' : (errors.filter(e => e.type === 'Lexical').length > 0 ? 'Errors Detected' : 'Clean')}
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                  Syntax: {status === 'idle' ? '-' : (errors.filter(e => e.type === 'Syntax').length > 0 ? 'Errors Detected' : 'Clean')}
-                </div>
-             </div>
-          </CardFooter>
-        </Card>
+            
+            <CardFooter className="bg-white/50 border-t p-4 flex items-center justify-between">
+               <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-2.5">
+                    <div className={cn("w-2 h-2 rounded-full", status === 'idle' ? 'bg-muted' : (errors.filter(e => e.type === 'Lexical').length > 0 ? 'bg-destructive shadow-[0_0_8px_rgba(255,0,0,0.5)]' : 'bg-secondary'))} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Lexical</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className={cn("w-2 h-2 rounded-full", status === 'idle' ? 'bg-muted' : (errors.filter(e => e.type === 'Syntax').length > 0 ? 'bg-destructive shadow-[0_0_8px_rgba(255,0,0,0.5)]' : 'bg-secondary'))} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Syntax</span>
+                  </div>
+               </div>
+               <div className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.3em]">
+                 Panic Recovery Active
+               </div>
+            </CardFooter>
+          </Card>
+        </div>
       </main>
 
-      {/* Footer Info */}
-      <footer className="p-4 bg-muted/20 border-t text-center">
-        <p className="text-[10px] font-headline font-bold uppercase tracking-widest text-muted-foreground">
-          Built for Educational Purposes &bull; LL(1) Recursive Descent &bull; Panic Mode Recovery &bull; AI Diagnostics
+      {/* Footer */}
+      <footer className="p-8 mt-auto border-t bg-white flex flex-col items-center space-y-4">
+        <div className="flex items-center gap-8 opacity-40">
+           <span className="text-[10px] font-bold uppercase tracking-widest">Compiler LL(1)</span>
+           <div className="h-1 w-1 rounded-full bg-muted-foreground" />
+           <span className="text-[10px] font-bold uppercase tracking-widest">Recursive Descent</span>
+           <div className="h-1 w-1 rounded-full bg-muted-foreground" />
+           <span className="text-[10px] font-bold uppercase tracking-widest">AI Core v2.0</span>
+        </div>
+        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-muted-foreground/30">
+          SyntaxSculptor &bull; Engineered for Education
         </p>
       </footer>
     </div>
