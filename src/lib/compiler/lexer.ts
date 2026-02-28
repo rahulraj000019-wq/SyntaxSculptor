@@ -1,19 +1,18 @@
+/**
+ * @fileOverview Lexical Analyzer (Scanner)
+ * This module converts raw C source code into a stream of tokens.
+ * It handles keywords, identifiers, numbers, operators, and preprocessor symbols.
+ */
+
 export type TokenType =
-  | 'INT'
-  | 'IF'
-  | 'WHILE'
-  | 'ID'
-  | 'NUMBER'
-  | 'ASSIGN'
-  | 'PLUS'
-  | 'MINUS'
-  | 'LPAREN'
-  | 'RPAREN'
-  | 'LBRACE'
-  | 'RBRACE'
-  | 'SEMICOLON'
-  | 'EOF'
-  | 'INVALID';
+  | 'INT' | 'FLOAT' | 'DOUBLE' | 'CHAR' | 'VOID'
+  | 'IF' | 'ELSE' | 'WHILE' | 'FOR' | 'RETURN'
+  | 'INCLUDE' | 'PREPROCESSOR' // #include, #define
+  | 'ID' | 'NUMBER' | 'STRING'
+  | 'ASSIGN' | 'PLUS' | 'MINUS' | 'STAR' | 'SLASH' | 'PERCENT'
+  | 'LPAREN' | 'RPAREN' | 'LBRACE' | 'RBRACE' | 'LBRACKET' | 'RBRACKET'
+  | 'SEMICOLON' | 'COMMA' | 'DOT' | 'ARROW'
+  | 'EOF' | 'INVALID';
 
 export interface Token {
   type: TokenType;
@@ -42,7 +41,7 @@ export class Lexer {
   }
 
   nextToken(): Token {
-    this.skipWhitespace();
+    this.skipWhitespaceAndComments();
 
     if (this.pos >= this.input.length) {
       return { type: 'EOF', value: '', line: this.line };
@@ -50,30 +49,60 @@ export class Lexer {
 
     const char = this.input[this.pos];
 
+    // Preprocessor directives
+    if (char === '#') {
+      this.pos++;
+      let value = '#';
+      while (this.pos < this.input.length && this.input[this.pos] !== '\n') {
+        value += this.input[this.pos++];
+      }
+      return { type: 'PREPROCESSOR', value, line: this.line };
+    }
+
+    // Strings
+    if (char === '"') {
+      return this.readString();
+    }
+
+    // Numbers
     if (this.isDigit(char)) return this.readNumber();
+    
+    // Identifiers and Keywords
     if (this.isAlpha(char)) return this.readIdentifierOrKeyword();
 
     this.pos++;
     switch (char) {
       case '=': return { type: 'ASSIGN', value: '=', line: this.line };
       case '+': return { type: 'PLUS', value: '+', line: this.line };
-      case '-': return { type: 'MINUS', value: '-', line: this.line };
+      case '-': 
+        if (this.input[this.pos] === '>') {
+          this.pos++;
+          return { type: 'ARROW', value: '->', line: this.line };
+        }
+        return { type: 'MINUS', value: '-', line: this.line };
+      case '*': return { type: 'STAR', value: '*', line: this.line };
+      case '/': return { type: 'SLASH', value: '/', line: this.line };
       case '(': return { type: 'LPAREN', value: '(', line: this.line };
       case ')': return { type: 'RPAREN', value: ')', line: this.line };
       case '{': return { type: 'LBRACE', value: '{', line: this.line };
       case '}': return { type: 'RBRACE', value: '}', line: this.line };
+      case '[': return { type: 'LBRACKET', value: '[', line: this.line };
+      case ']': return { type: 'RBRACKET', value: ']', line: this.line };
       case ';': return { type: 'SEMICOLON', value: ';', line: this.line };
+      case ',': return { type: 'COMMA', value: ',', line: this.line };
+      case '.': return { type: 'DOT', value: '.', line: this.line };
       default:
+        const errChar = char;
         this.errors.push({
           type: 'Lexical',
           line: this.line,
-          message: `Invalid character '${char}'`,
+          message: `Unexpected symbol: '${errChar}'`,
         });
-        return { type: 'INVALID', value: char, line: this.line };
+        return { type: 'INVALID', value: errChar, line: this.line };
     }
   }
 
-  private skipWhitespace() {
+  private skipWhitespaceAndComments() {
     while (this.pos < this.input.length) {
       const char = this.input[this.pos];
       if (char === '\n') {
@@ -81,15 +110,39 @@ export class Lexer {
         this.pos++;
       } else if (/\s/.test(char)) {
         this.pos++;
+      } else if (char === '/' && this.input[this.pos + 1] === '/') {
+        // Single line comment
+        while (this.pos < this.input.length && this.input[this.pos] !== '\n') this.pos++;
+      } else if (char === '/' && this.input[this.pos + 1] === '*') {
+        // Block comment
+        this.pos += 2;
+        while (this.pos < this.input.length && !(this.input[this.pos] === '*' && this.input[this.pos+1] === '/')) {
+          if (this.input[this.pos] === '\n') this.line++;
+          this.pos++;
+        }
+        this.pos += 2;
       } else {
         break;
       }
     }
   }
 
+  private readString(): Token {
+    this.pos++; // skip "
+    let value = '';
+    while (this.pos < this.input.length && this.input[this.pos] !== '"') {
+      if (this.input[this.pos] === '\\') { // handle escape
+        value += this.input[this.pos++];
+      }
+      value += this.input[this.pos++];
+    }
+    this.pos++; // skip "
+    return { type: 'STRING', value: `"${value}"`, line: this.line };
+  }
+
   private readNumber(): Token {
     let value = '';
-    while (this.pos < this.input.length && this.isDigit(this.input[this.pos])) {
+    while (this.pos < this.input.length && (this.isDigit(this.input[this.pos]) || this.input[this.pos] === '.')) {
       value += this.input[this.pos++];
     }
     return { type: 'NUMBER', value, line: this.line };
@@ -101,18 +154,14 @@ export class Lexer {
       value += this.input[this.pos++];
     }
 
-    if (value === 'int') return { type: 'INT', value, line: this.line };
-    if (value === 'if') return { type: 'IF', value, line: this.line };
-    if (value === 'while') return { type: 'WHILE', value, line: this.line };
+    const keywords: Record<string, TokenType> = {
+      'int': 'INT', 'float': 'FLOAT', 'double': 'DOUBLE', 'char': 'CHAR', 'void': 'VOID',
+      'if': 'IF', 'else': 'ELSE', 'while': 'WHILE', 'for': 'FOR', 'return': 'RETURN'
+    };
 
-    return { type: 'ID', value, line: this.line };
+    return { type: keywords[value] || 'ID', value, line: this.line };
   }
 
-  private isDigit(char: string) {
-    return char >= '0' && char <= '9';
-  }
-
-  private isAlpha(char: string) {
-    return (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || char === '_';
-  }
+  private isDigit(char: string) { return char >= '0' && char <= '9'; }
+  private isAlpha(char: string) { return (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || char === '_'; }
 }

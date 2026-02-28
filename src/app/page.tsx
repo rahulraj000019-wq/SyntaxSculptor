@@ -16,7 +16,8 @@ import {
   Minimize2,
   Cpu,
   Wand2,
-  X
+  X,
+  Layers
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -70,12 +71,17 @@ export default function SyntaxSculptorPage() {
     setStatus('idle');
     setErrors([]);
 
+    // Step 1: Lexical Analysis (Local)
     const lexer = new Lexer(code);
+    
+    // Step 2: Syntax Analysis (Local)
     const parser = new Parser(lexer);
     parser.parse();
+    
     const localErrors = [...lexer.getErrors(), ...parser.getErrors()];
 
     try {
+      // Step 3: AI Semantic & Deep Analysis (Remote)
       const result = await explainCompilerErrors({
         sourceCode: code,
         compilerErrors: localErrors.map(e => ({
@@ -112,8 +118,8 @@ export default function SyntaxSculptorPage() {
       setAiAnalysis(null);
       setErrors([]);
       toast({
-        title: "Code Restored",
-        description: "AI magic has successfully patched your source code.",
+        title: "Code Refactored",
+        description: "The AI compiler has successfully applied standard-compliant patches.",
       });
     }
   };
@@ -138,14 +144,14 @@ export default function SyntaxSculptorPage() {
             </h1>
             <div className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-secondary animate-pulse" />
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em]">Universal C-Language Diagnostic Core</p>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em]">C-Compiler Core & Semantic Diagnostic Hub</p>
             </div>
           </div>
         </div>
         
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={handleClear} className="gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/5 font-semibold">
-            <Trash2 className="h-4 w-4" /> Clear
+            <Trash2 className="h-4 w-4" /> Reset
           </Button>
           <Button 
             onClick={handleCompile} 
@@ -157,7 +163,7 @@ export default function SyntaxSculptorPage() {
             ) : (
               <Play className="h-4 w-4 fill-current" />
             )}
-            Deep Scan Code
+            Run Diagnostics
           </Button>
         </div>
       </header>
@@ -168,8 +174,8 @@ export default function SyntaxSculptorPage() {
         <div className="flex flex-col space-y-4">
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-primary/40" />
-              <h3 className="text-sm font-headline font-bold uppercase tracking-wider text-muted-foreground">C Source Editor</h3>
+              <Code2 className="h-4 w-4 text-primary/60" />
+              <h3 className="text-sm font-headline font-bold uppercase tracking-wider text-muted-foreground">Source Engine</h3>
             </div>
             <Badge variant="outline" className="font-code text-[10px] border-primary/20 bg-primary/5 text-primary">
               C89 / C99 / C11 / C23
@@ -193,7 +199,7 @@ export default function SyntaxSculptorPage() {
               ))}
             </div>
             
-            <div className="absolute right-4 top-4 z-20">
+            <div className="absolute right-4 top-4 z-20 flex items-center gap-2">
               {isMaximized && (
                 <Button 
                   variant="ghost" 
@@ -212,7 +218,7 @@ export default function SyntaxSculptorPage() {
                 spellCheck={false}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                placeholder="// Write any C code here..."
+                placeholder="// Start writing C code..."
               />
               {!isMaximized && (
                 <div className="absolute right-4 bottom-4 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -233,8 +239,8 @@ export default function SyntaxSculptorPage() {
         <div className="flex flex-col space-y-4">
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-2">
-              <Terminal className="h-4 w-4 text-primary/60" />
-              <h3 className="text-sm font-headline font-bold uppercase tracking-wider text-muted-foreground">Diagnostic Insights</h3>
+              <Layers className="h-4 w-4 text-primary/60" />
+              <h3 className="text-sm font-headline font-bold uppercase tracking-wider text-muted-foreground">Compiler Pipeline</h3>
             </div>
             {status !== 'idle' && (
               <Badge 
@@ -244,7 +250,7 @@ export default function SyntaxSculptorPage() {
                   status === 'success' ? "bg-secondary text-white border-none" : ""
                 )}
               >
-                {status === 'success' ? 'Valid C Code' : `${errors.length} Issues Found`}
+                {status === 'success' ? 'Verified Build' : `${errors.length} Pipeline Faults`}
               </Badge>
             )}
           </div>
@@ -255,12 +261,12 @@ export default function SyntaxSculptorPage() {
                 <div className="h-full min-h-[500px] flex flex-col items-center justify-center text-center space-y-6 opacity-40 group">
                   <div className="relative">
                     <div className="absolute -inset-4 bg-muted rounded-full blur-2xl group-hover:bg-primary/20 transition-colors" />
-                    <BookOpen className="h-16 w-16 text-muted-foreground relative" />
+                    <Terminal className="h-16 w-16 text-muted-foreground relative" />
                   </div>
                   <div className="space-y-2 relative">
-                    <p className="font-headline font-bold text-xl text-primary/80">Awaiting Compilation</p>
+                    <p className="font-headline font-bold text-xl text-primary/80">Diagnostic Core Ready</p>
                     <p className="text-sm text-muted-foreground max-w-[280px] leading-relaxed font-medium">
-                      Enter any standard C code to perform a deep semantic and structural analysis.
+                      Press 'Run Diagnostics' to trigger Lexical, Syntax, and Semantic analysis stages.
                     </p>
                   </div>
                 </div>
@@ -272,9 +278,16 @@ export default function SyntaxSculptorPage() {
                     <div className="absolute -inset-4 bg-primary/10 rounded-full animate-ping" />
                     <Loader2 className="h-12 w-12 animate-spin text-primary relative" />
                   </div>
-                  <div className="space-y-2">
-                    <p className="font-headline font-bold text-lg animate-pulse tracking-wide uppercase">AI Semantic Engine Active</p>
-                    <p className="text-xs text-muted-foreground font-bold">POINTERS • MEMORY • SYMBOLS • STANDARDS</p>
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <p className="font-headline font-bold text-lg animate-pulse tracking-wide uppercase">Processing Pipeline</p>
+                      <div className="flex gap-2 justify-center">
+                        <Badge variant="outline" className="text-[8px] animate-pulse">LEXICAL ✓</Badge>
+                        <Badge variant="outline" className="text-[8px] animate-pulse">SYNTAX ✓</Badge>
+                        <Badge variant="outline" className="text-[8px] animate-pulse">SEMANTIC...</Badge>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground font-bold tracking-tighter uppercase opacity-50">SCANNING SYMBOLS • CHECKING STANDARDS • LLM REASONING</p>
                   </div>
                 </div>
               )}
@@ -287,8 +300,8 @@ export default function SyntaxSculptorPage() {
                         <CheckCircle2 className="h-8 w-8 text-white" />
                       </div>
                       <div>
-                        <h3 className="font-headline font-bold text-2xl text-secondary-foreground/90">Standard Compliant</h3>
-                        <p className="text-sm text-muted-foreground mt-1 font-medium">Your C code successfully passed the deep semantic scan.</p>
+                        <h3 className="font-headline font-bold text-2xl text-secondary-foreground/90">Build Verified</h3>
+                        <p className="text-sm text-muted-foreground mt-1 font-medium">Pipeline successfully validated Lexical, Syntax, and Semantic layers.</p>
                       </div>
                     </div>
                     {aiAnalysis?.overallFeedback && (
@@ -308,8 +321,8 @@ export default function SyntaxSculptorPage() {
                         <AlertCircle className="h-6 w-6 text-destructive" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-destructive tracking-tight">Diagnostics Report</p>
-                        <p className="text-xs text-destructive/70 font-medium">Found {errors.length} semantic or syntax violations.</p>
+                        <p className="text-sm font-bold text-destructive tracking-tight">Fault Detection Report</p>
+                        <p className="text-xs text-destructive/70 font-medium">Discovered {errors.length} violations in the source logic.</p>
                       </div>
                     </div>
                     
@@ -335,7 +348,7 @@ export default function SyntaxSculptorPage() {
                         <AccordionTrigger className="hover:no-underline px-6 py-5 group">
                           <div className="flex items-center gap-5 text-left w-full">
                             <div className="bg-muted px-3 py-1.5 rounded-lg text-[10px] font-code font-black text-muted-foreground">
-                              LINE {error.line}
+                              L{error.line}
                             </div>
                             <div className="flex-1">
                               <span className="font-bold text-sm tracking-tight text-foreground/80 line-clamp-1">{error.originalMessage || error.message}</span>
@@ -346,7 +359,7 @@ export default function SyntaxSculptorPage() {
                         <AccordionContent className="px-6 pb-6 space-y-6">
                           <div className="flex gap-4">
                             <Badge variant="secondary" className="bg-muted/50 text-muted-foreground border-none font-bold text-[10px]">
-                              {String(error.type || 'Error').toUpperCase()}
+                              {String(error.type || 'Fault').toUpperCase()}
                             </Badge>
                           </div>
 
@@ -354,7 +367,7 @@ export default function SyntaxSculptorPage() {
                             <div className="space-y-3">
                               <div className="flex items-center gap-2 text-primary/80">
                                 <Sparkles className="h-4 w-4 text-secondary" />
-                                <h4 className="font-headline font-bold text-sm uppercase tracking-wide">AI Core Explanation</h4>
+                                <h4 className="font-headline font-bold text-sm uppercase tracking-wide">Semantic Analysis</h4>
                               </div>
                               <p className="text-sm text-foreground/80 leading-relaxed font-medium">
                                 {error.explanation || error.message}
@@ -364,7 +377,7 @@ export default function SyntaxSculptorPage() {
                             {error.potentialCauses && (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="bg-muted/30 p-4 rounded-xl space-y-2 border border-muted-foreground/5">
-                                  <h5 className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground">C Standard Pitfalls</h5>
+                                  <h5 className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground">Compiler Pitfalls</h5>
                                   <ul className="space-y-1.5">
                                     {error.potentialCauses.map((cause: string, cIdx: number) => (
                                       <li key={cIdx} className="text-xs text-foreground/70 font-semibold flex items-center gap-2">
@@ -376,7 +389,7 @@ export default function SyntaxSculptorPage() {
                                 </div>
 
                                 <div className="bg-secondary/5 p-4 rounded-xl space-y-2 border border-secondary/10">
-                                  <h5 className="text-[10px] font-black uppercase tracking-[0.15em] text-secondary/70">Corrective Actions</h5>
+                                  <h5 className="text-[10px] font-black uppercase tracking-[0.15em] text-secondary/70">Resolution Path</h5>
                                   <ul className="space-y-1.5">
                                     {error.suggestions.map((sug: string, sIdx: number) => (
                                       <li key={sIdx} className="text-xs text-foreground/70 font-semibold flex items-center gap-2">
@@ -402,15 +415,19 @@ export default function SyntaxSculptorPage() {
                <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2.5">
                     <div className={cn("w-2 h-2 rounded-full", status === 'idle' ? 'bg-muted' : (status === 'failed' ? 'bg-destructive shadow-[0_0_8px_rgba(255,0,0,0.5)]' : 'bg-secondary'))} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Semantic Analysis</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Lexical Scan</span>
                   </div>
                   <div className="flex items-center gap-2.5">
                     <div className={cn("w-2 h-2 rounded-full", status === 'idle' ? 'bg-muted' : (status === 'failed' ? 'bg-destructive shadow-[0_0_8px_rgba(255,0,0,0.5)]' : 'bg-secondary'))} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">C Standards</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Syntax Parse</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <div className={cn("w-2 h-2 rounded-full", status === 'idle' ? 'bg-muted' : (status === 'failed' ? 'bg-destructive shadow-[0_0_8px_rgba(255,0,0,0.5)]' : 'bg-secondary'))} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">Semantic Hub</span>
                   </div>
                </div>
                <div className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.3em]">
-                 Universal C Diagnostic Core 2.0
+                 Universal C Diagnostics 2.1
                </div>
             </CardFooter>
           </Card>
@@ -419,14 +436,14 @@ export default function SyntaxSculptorPage() {
 
       <footer className="p-8 mt-auto border-t bg-white flex flex-col items-center space-y-4">
         <div className="flex items-center gap-8 opacity-40">
-           <span className="text-[10px] font-bold uppercase tracking-widest">C89/C99/C11/C23</span>
+           <span className="text-[10px] font-bold uppercase tracking-widest">Recursive Descent Parser</span>
            <div className="h-1 w-1 rounded-full bg-muted-foreground" />
-           <span className="text-[10px] font-bold uppercase tracking-widest">Deep Semantic Scan</span>
+           <span className="text-[10px] font-bold uppercase tracking-widest">Token-Based Scanner</span>
            <div className="h-1 w-1 rounded-full bg-muted-foreground" />
-           <span className="text-[10px] font-bold uppercase tracking-widest">GenAI Diagnostics</span>
+           <span className="text-[10px] font-bold uppercase tracking-widest">GenAI Semantic Core</span>
         </div>
         <p className="text-[10px] font-black uppercase tracking-[0.5em] text-muted-foreground/30">
-          SyntaxSculptor &bull; Professional Edition
+          SyntaxSculptor &bull; Compiler Design Environment
         </p>
       </footer>
     </div>

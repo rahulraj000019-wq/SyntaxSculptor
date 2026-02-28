@@ -1,3 +1,9 @@
+/**
+ * @fileOverview Syntax Analyzer (Recursive Descent Parser)
+ * This module checks if the token stream conforms to the C-like grammar rules.
+ * It provides local structural verification before AI semantic analysis.
+ */
+
 import { Lexer, Token, TokenType } from './lexer';
 
 export interface SyntaxError {
@@ -35,7 +41,7 @@ export class Parser {
       return true;
     } else {
       const found = this.currentToken.type === 'EOF' ? 'end of file' : `'${this.currentToken.value}'`;
-      this.error(`Expected '${expected}', but found ${found}`);
+      this.error(`Grammar violation: Expected ${expected}, but found ${found}`);
       return false;
     }
   }
@@ -50,7 +56,7 @@ export class Parser {
   }
 
   private panicMode() {
-    // Skip tokens until we find a synchronization point: ; } or EOF
+    // Synchronization strategy: Skip tokens until a statement boundary
     while (
       this.currentToken.type !== 'SEMICOLON' &&
       this.currentToken.type !== 'RBRACE' &&
@@ -58,44 +64,30 @@ export class Parser {
     ) {
       this.consume();
     }
-    // Optionally consume the synchronizing token if it's a semicolon to move past the statement
-    if (this.currentToken.type === 'SEMICOLON') {
-      this.consume();
-    }
+    if (this.currentToken.type === 'SEMICOLON') this.consume();
   }
 
-  // Program -> StatementList
   private program() {
-    this.statementList();
-    if (this.currentToken.type !== 'EOF') {
-      this.errors.push({
-        type: 'Syntax',
-        line: this.currentToken.line,
-        message: `Unexpected token '${this.currentToken.value}' after program end`,
-      });
+    while (this.currentToken.type !== 'EOF') {
+      if (this.currentToken.type === 'PREPROCESSOR') {
+        this.consume();
+      } else {
+        this.statement();
+      }
     }
   }
 
-  // StatementList -> Statement StatementList | ε
-  private statementList() {
-    while (
-      this.currentToken.type === 'INT' ||
-      this.currentToken.type === 'ID' ||
-      this.currentToken.type === 'IF' ||
-      this.currentToken.type === 'WHILE'
-    ) {
-      this.statement();
-    }
-  }
-
-  // Statement -> Declaration | Assignment | IfStmt | WhileStmt
   private statement() {
     switch (this.currentToken.type) {
       case 'INT':
-        this.declaration();
+      case 'FLOAT':
+      case 'DOUBLE':
+      case 'CHAR':
+      case 'VOID':
+        this.declarationOrFunction();
         break;
       case 'ID':
-        this.assignment();
+        this.assignmentOrCall();
         break;
       case 'IF':
         this.ifStmt();
@@ -103,27 +95,60 @@ export class Parser {
       case 'WHILE':
         this.whileStmt();
         break;
+      case 'RETURN':
+        this.returnStmt();
+        break;
       default:
-        this.error("Invalid start of statement");
+        this.error(`Unexpected start of statement: '${this.currentToken.value}'`);
+        this.consume();
     }
   }
 
-  // Declaration -> 'int' id ';'
-  private declaration() {
-    this.match('INT');
+  private declarationOrFunction() {
+    this.consume(); // type
     this.match('ID');
+    
+    if (this.currentToken.type === 'LPAREN') {
+      // Function Definition
+      this.consume();
+      // Simple param list (ignoring types for this educational parser)
+      while (this.currentToken.type !== 'RPAREN' && this.currentToken.type !== 'EOF') {
+        this.consume();
+      }
+      this.match('RPAREN');
+      this.match('LBRACE');
+      this.statementList();
+      this.match('RBRACE');
+    } else {
+      // Variable Declaration
+      this.match('SEMICOLON');
+    }
+  }
+
+  private statementList() {
+    while (
+      this.currentToken.type !== 'RBRACE' && 
+      this.currentToken.type !== 'EOF'
+    ) {
+      this.statement();
+    }
+  }
+
+  private assignmentOrCall() {
+    this.match('ID');
+    if (this.currentToken.type === 'ASSIGN') {
+      this.consume();
+      this.expression();
+    } else if (this.currentToken.type === 'LPAREN') {
+      this.consume();
+      while (this.currentToken.type !== 'RPAREN' && this.currentToken.type !== 'EOF') {
+        this.consume();
+      }
+      this.match('RPAREN');
+    }
     this.match('SEMICOLON');
   }
 
-  // Assignment -> id '=' Expression ';'
-  private assignment() {
-    this.match('ID');
-    this.match('ASSIGN');
-    this.expression();
-    this.match('SEMICOLON');
-  }
-
-  // IfStmt -> 'if' '(' Expression ')' '{' StatementList '}'
   private ifStmt() {
     this.match('IF');
     this.match('LPAREN');
@@ -134,7 +159,6 @@ export class Parser {
     this.match('RBRACE');
   }
 
-  // WhileStmt -> 'while' '(' Expression ')' '{' StatementList '}'
   private whileStmt() {
     this.match('WHILE');
     this.match('LPAREN');
@@ -145,28 +169,31 @@ export class Parser {
     this.match('RBRACE');
   }
 
-  // Expression -> Term Expression'
-  private expression() {
-    this.term();
-    this.expressionPrime();
+  private returnStmt() {
+    this.match('RETURN');
+    if (this.currentToken.type !== 'SEMICOLON') {
+      this.expression();
+    }
+    this.match('SEMICOLON');
   }
 
-  // Expression' -> '+' Term Expression' | '-' Term Expression' | ε
-  private expressionPrime() {
-    if (this.currentToken.type === 'PLUS' || this.currentToken.type === 'MINUS') {
+  private expression() {
+    this.term();
+    while (this.currentToken.type === 'PLUS' || this.currentToken.type === 'MINUS') {
       this.consume();
       this.term();
-      this.expressionPrime();
     }
   }
 
-  // Term -> id | number
   private term() {
-    if (this.currentToken.type === 'ID' || this.currentToken.type === 'NUMBER') {
+    if (
+      this.currentToken.type === 'ID' || 
+      this.currentToken.type === 'NUMBER' || 
+      this.currentToken.type === 'STRING'
+    ) {
       this.consume();
     } else {
-      const found = this.currentToken.type === 'EOF' ? 'end of file' : `'${this.currentToken.value}'`;
-      this.error(`Expected identifier or number, but found ${found}`);
+      this.error(`Expected operand, but found '${this.currentToken.value}'`);
     }
   }
 }
