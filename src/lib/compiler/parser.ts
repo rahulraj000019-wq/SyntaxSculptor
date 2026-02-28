@@ -34,7 +34,8 @@ export class Parser {
       this.consume();
       return true;
     } else {
-      this.error(`Expected '${expected}', but found '${this.currentToken.type}'`);
+      const found = this.currentToken.type === 'EOF' ? 'end of file' : `'${this.currentToken.value}'`;
+      this.error(`Expected '${expected}', but found ${found}`);
       return false;
     }
   }
@@ -164,7 +165,8 @@ export class Parser {
     if (this.currentToken.type === 'ID' || this.currentToken.type === 'NUMBER') {
       this.consume();
     } else {
-      this.error(`Expected identifier or number, but found '${this.currentToken.type}'`);
+      const found = this.currentToken.type === 'EOF' ? 'end of file' : `'${this.currentToken.value}'`;
+      this.error(`Expected identifier or number, but found ${found}`);
     }
   }
 }

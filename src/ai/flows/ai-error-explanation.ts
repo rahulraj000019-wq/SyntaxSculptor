@@ -2,7 +2,7 @@
 /**
  * @fileOverview This file implements a Genkit flow for generating AI-enhanced explanations for compiler errors.
  * It takes a list of compiler errors and the source code, then uses a large language model to provide
- * clear explanations, potential causes, and actionable suggestions for each error.
+ * clear, pedagogical explanations, potential causes, and actionable suggestions for each error.
  *
  * - explainCompilerErrors - A function that triggers the AI error explanation process.
  * - AIErrorExplanationInput - The input type for the explainCompilerErrors function.
@@ -48,30 +48,37 @@ const aiErrorExplanationPrompt = ai.definePrompt({
   name: 'aiErrorExplanationPrompt',
   input: { schema: AIErrorExplanationInputSchema },
   output: { schema: AIErrorExplanationOutputSchema },
-  prompt: `You are an expert compiler diagnostics assistant for a simplified C-like language.
-Your task is to analyze compiler errors and provide clear, actionable explanations, potential causes, and suggestions for fixing them.
-The goal is to help students learn and understand their mistakes without being overwhelmed by technical jargon.
+  prompt: `You are an expert compiler diagnostics assistant and pedagogical mentor for a simplified C-like language.
+Your task is to analyze compiler errors (Lexical or Syntax) within a specific source code context and provide clear, empathetic, and highly actionable explanations.
 
-Here is the full source code that generated the errors:
+The language rules are:
+- Types: only 'int' is supported.
+- Keywords: 'int', 'if', 'while'.
+- Operators: '=', '+', '-'.
+- Symbols: '(', ')', '{', '}', ';'.
+- Syntax: Statements must end with ';'. Control flow uses '{' and '}'. Expressions are simple infix arithmetic.
+
+Goal: Help students understand exactly WHY their code is wrong and HOW to fix it, referring specifically to their code's content and variable names.
+
+Source Code:
 \`\`\`c
 {{{sourceCode}}}
 \`\`\`
 
-Here are the detected compiler errors:
+Detected Compiler Errors:
 {{#each compilerErrors}}
 - Type: {{{type}}}, Line: {{{line}}}, Message: "{{{message}}}"
 {{/each}}
 
-Please provide an enhanced explanation for each error in a JSON array format, following the structure of the \`enhancedErrors\` field in the \`AIErrorExplanationOutputSchema\`.
-For each error, include:
-- \`originalMessage\`: The exact message reported by the compiler.
-- \`line\`: The line number where the error occurred.
-- \`type\`: The type of error (Lexical or Syntax).
-- \`explanation\`: A clear, concise explanation of what the error means in simple terms.
-- \`potentialCauses\`: A list of 2-3 common reasons why this specific error might appear.
-- \`suggestions\`: A list of 2-3 specific, actionable steps a student can take to resolve this error.
+For each error, generate an entry in the \`enhancedErrors\` array:
+- \`originalMessage\`: The exact message from the compiler.
+- \`line\`: The line number of the error.
+- \`type\`: Lexical or Syntax.
+- \`explanation\`: Pinpoint the exact mistake. Reference the identifiers or operators on that line. Explain the concept (e.g., "The compiler expected a semicolon to finish the previous thought before seeing this new name").
+- \`potentialCauses\`: List 2-3 distinct conceptual mistakes (e.g., "Forgotten semicolon", "Incomplete expression", "Mismatched braces").
+- \`suggestions\`: Provide specific code snippets showing how to fix it based on the user's actual variables. Use a format like "Change \`line context\` to \`fixed code\`".
 
-Ensure the output is a valid JSON object.`,
+Ensure the output is valid JSON.`,
 });
 
 const aiErrorExplanationFlow = ai.defineFlow(
