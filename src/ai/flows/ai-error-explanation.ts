@@ -1,8 +1,8 @@
 'use server';
 /**
- * @fileOverview This file implements a Genkit flow for generating AI-enhanced explanations for compiler errors.
- * It takes a list of compiler errors and the source code, then uses a large language model to provide
- * clear, pedagogical explanations, potential causes, and actionable suggestions for each error.
+ * @fileOverview This file implements a Genkit flow for generating AI-enhanced explanations for C language compiler errors.
+ * It takes the source code and optionally pre-detected errors, then uses a large language model to provide
+ * expert analysis of syntax, semantics, and common C pitfalls.
  *
  * - explainCompilerErrors - A function that triggers the AI error explanation process.
  * - AIErrorExplanationInput - The input type for the explainCompilerErrors function.
@@ -15,27 +15,29 @@ import { z } from 'genkit';
 const CompilerErrorSchema = z.object({
   message: z.string().describe('The raw error message from the compiler.'),
   line: z.number().describe('The line number where the error occurred.'),
-  type: z.enum(['Lexical', 'Syntax']).describe('The type of error (Lexical or Syntax).'),
+  type: z.enum(['Lexical', 'Syntax', 'Semantic', 'Header', 'Logic']).describe('The type of error.'),
 });
 
 const AIErrorExplanationInputSchema = z.object({
-  sourceCode: z.string().describe('The full source code provided by the user.'),
-  compilerErrors: z.array(CompilerErrorSchema).describe('A list of detected compiler errors.'),
+  sourceCode: z.string().describe('The full C source code provided by the user.'),
+  compilerErrors: z.array(CompilerErrorSchema).optional().describe('A list of detected compiler errors, if any.'),
 });
 
 export type AIErrorExplanationInput = z.infer<typeof AIErrorExplanationInputSchema>;
 
 const EnhancedErrorExplanationSchema = z.object({
-  originalMessage: z.string().describe('The raw error message as reported by the compiler.'),
-  line: z.number().describe('The line number associated with the original error.'),
-  type: z.enum(['Lexical', 'Syntax']).describe('The type of error (Lexical or Syntax).'),
+  originalMessage: z.string().describe('A short title or description of the error.'),
+  line: z.number().describe('The line number associated with the error.'),
+  type: z.string().describe('The category of the error (e.g., Syntax, Pointer, Memory).'),
   explanation: z.string().describe('A clear, user-friendly explanation of the error.'),
-  potentialCauses: z.array(z.string()).describe('A list of common reasons why this error might occur.'),
-  suggestions: z.array(z.string()).describe('Actionable steps to fix the error.'),
+  potentialCauses: z.array(z.string()).describe('A list of common reasons why this error might occur in C.'),
+  suggestions: z.array(z.string()).describe('Actionable steps to fix the error with code examples.'),
 });
 
 const AIErrorExplanationOutputSchema = z.object({
-  enhancedErrors: z.array(EnhancedErrorExplanationSchema).describe('A list of enhanced error explanations.'),
+  success: z.boolean().describe('Whether the code is valid C or not.'),
+  enhancedErrors: z.array(EnhancedErrorExplanationSchema).describe('A list of detected errors and their explanations.'),
+  overallFeedback: z.string().optional().describe('General feedback on the code quality or C standards (C89, C99, etc.).'),
 });
 
 export type AIErrorExplanationOutput = z.infer<typeof AIErrorExplanationOutputSchema>;
@@ -48,37 +50,30 @@ const aiErrorExplanationPrompt = ai.definePrompt({
   name: 'aiErrorExplanationPrompt',
   input: { schema: AIErrorExplanationInputSchema },
   output: { schema: AIErrorExplanationOutputSchema },
-  prompt: `You are an expert compiler diagnostics assistant and pedagogical mentor for a simplified C-like language.
-Your task is to analyze compiler errors (Lexical or Syntax) within a specific source code context and provide clear, empathetic, and highly actionable explanations.
-
-The language rules are:
-- Types: only 'int' is supported.
-- Keywords: 'int', 'if', 'while'.
-- Operators: '=', '+', '-'.
-- Symbols: '(', ')', '{', '}', ';'.
-- Syntax: Statements must end with ';'. Control flow uses '{' and '}'. Expressions are simple infix arithmetic.
-
-Goal: Help students understand exactly WHY their code is wrong and HOW to fix it, referring specifically to their code's content and variable names.
+  prompt: `You are an elite C language compiler and mentor. You support the full C standard (C89, C99, C11, C17, C23).
+Your task is to analyze the provided C source code. Identify any syntax errors, semantic issues (type mismatches, uninitialized variables), memory management problems (leaks, buffer overflows), or logic flaws.
 
 Source Code:
 \`\`\`c
 {{{sourceCode}}}
 \`\`\`
 
-Detected Compiler Errors:
+{{#if compilerErrors}}
+Preliminary Detected Issues:
 {{#each compilerErrors}}
 - Type: {{{type}}}, Line: {{{line}}}, Message: "{{{message}}}"
 {{/each}}
+{{/if}}
 
-For each error, generate an entry in the \`enhancedErrors\` array:
-- \`originalMessage\`: The exact message from the compiler.
-- \`line\`: The line number of the error.
-- \`type\`: Lexical or Syntax.
-- \`explanation\`: Pinpoint the exact mistake. Reference the identifiers or operators on that line. Explain the concept (e.g., "The compiler expected a semicolon to finish the previous thought before seeing this new name").
-- \`potentialCauses\`: List 2-3 distinct conceptual mistakes (e.g., "Forgotten semicolon", "Incomplete expression", "Mismatched braces").
-- \`suggestions\`: Provide specific code snippets showing how to fix it based on the user's actual variables. Use a format like "Change \`line context\` to \`fixed code\`".
+Perform a rigorous analysis. If the code is perfect, set "success" to true. If there are any issues, set "success" to false and provide detailed "enhancedErrors".
 
-Ensure the output is valid JSON.`,
+For each error:
+- Explain precisely WHY the C standard rejects this or why it is dangerous.
+- Reference specific line numbers and identifiers.
+- Provide "potentialCauses" related to C concepts (e.g., "Missing semicolon", "Pointer dereference error", "Implicit declaration of function").
+- Provide "suggestions" that show the user the corrected syntax.
+
+Be pedantic but helpful. Help the student understand the nuances of C (like why strings are char arrays or how memory allocation works).`,
 });
 
 const aiErrorExplanationFlow = ai.defineFlow(
