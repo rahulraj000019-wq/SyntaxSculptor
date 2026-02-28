@@ -13,7 +13,8 @@ import {
   Sparkles,
   ChevronRight,
   Maximize2,
-  Cpu
+  Cpu,
+  Wand2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -25,6 +26,7 @@ import { Parser } from '@/lib/compiler/parser';
 import { explainCompilerErrors, AIErrorExplanationOutput } from '@/ai/flows/ai-error-explanation';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 const DEFAULT_CODE = `#include <stdio.h>
 
@@ -65,15 +67,12 @@ export default function SyntaxSculptorPage() {
     setStatus('idle');
     setErrors([]);
 
-    // We still use the local parser for immediate feedback on the simple subset,
-    // but the AI is now the primary engine for "Full C" support.
     const lexer = new Lexer(code);
     const parser = new Parser(lexer);
     parser.parse();
     const localErrors = [...lexer.getErrors(), ...parser.getErrors()];
 
     try {
-      // Full AI Deep Scan for ANY C code
       const result = await explainCompilerErrors({
         sourceCode: code,
         compilerErrors: localErrors.map(e => ({
@@ -94,7 +93,6 @@ export default function SyntaxSculptorPage() {
       }
     } catch (err) {
       console.error('AI Analysis failed:', err);
-      // Fallback to local errors if AI fails
       if (localErrors.length > 0) {
         setStatus('failed');
         setErrors(localErrors);
@@ -103,6 +101,19 @@ export default function SyntaxSculptorPage() {
       setIsCompiling(false);
     }
   }, [code]);
+
+  const handleApplyFix = () => {
+    if (aiAnalysis?.correctedCode) {
+      setCode(aiAnalysis.correctedCode);
+      setStatus('idle');
+      setAiAnalysis(null);
+      setErrors([]);
+      toast({
+        title: "Code Restored",
+        description: "AI magic has successfully patched your source code.",
+      });
+    }
+  };
 
   const handleClear = () => {
     setCode('');
@@ -256,14 +267,27 @@ export default function SyntaxSculptorPage() {
 
               {status === 'failed' && (
                 <div className="space-y-8 pb-8 animate-in slide-in-from-bottom-4 duration-500">
-                  <div className="bg-destructive/5 border border-destructive/10 p-6 rounded-2xl flex items-center gap-4">
-                    <div className="bg-destructive/10 p-2 rounded-lg">
-                      <AlertCircle className="h-6 w-6 text-destructive" />
+                  <div className="bg-destructive/5 border border-destructive/10 p-6 rounded-2xl flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-destructive/10 p-2 rounded-lg">
+                        <AlertCircle className="h-6 w-6 text-destructive" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-destructive tracking-tight">Diagnostics Report</p>
+                        <p className="text-xs text-destructive/70 font-medium">Found {errors.length} semantic or syntax violations.</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold text-destructive tracking-tight">Diagnostics Report</p>
-                      <p className="text-xs text-destructive/70 font-medium">Found {errors.length} semantic or syntax violations.</p>
-                    </div>
+                    
+                    {aiAnalysis?.correctedCode && (
+                      <Button 
+                        size="sm" 
+                        onClick={handleApplyFix}
+                        className="bg-secondary hover:bg-secondary/90 text-white shadow-lg shadow-secondary/20 font-bold gap-2 animate-in fade-in slide-in-from-right-2"
+                      >
+                        <Wand2 className="h-3.5 w-3.5" />
+                        Magic Fix
+                      </Button>
+                    )}
                   </div>
 
                   <Accordion type="single" collapsible className="w-full space-y-4">

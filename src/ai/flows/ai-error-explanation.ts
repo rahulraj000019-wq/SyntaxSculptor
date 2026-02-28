@@ -38,6 +38,7 @@ const AIErrorExplanationOutputSchema = z.object({
   success: z.boolean().describe('Whether the code is valid C or not.'),
   enhancedErrors: z.array(EnhancedErrorExplanationSchema).describe('A list of detected errors and their explanations.'),
   overallFeedback: z.string().optional().describe('General feedback on the code quality or C standards (C89, C99, etc.).'),
+  correctedCode: z.string().optional().describe('A fully corrected, working, and properly formatted version of the source code.'),
 });
 
 export type AIErrorExplanationOutput = z.infer<typeof AIErrorExplanationOutputSchema>;
@@ -70,10 +71,12 @@ Perform a rigorous analysis. If the code is perfect, set "success" to true. If t
 For each error:
 - Explain precisely WHY the C standard rejects this or why it is dangerous.
 - Reference specific line numbers and identifiers.
-- Provide "potentialCauses" related to C concepts (e.g., "Missing semicolon", "Pointer dereference error", "Implicit declaration of function").
+- Provide "potentialCauses" related to C concepts.
 - Provide "suggestions" that show the user the corrected syntax.
 
-Be pedantic but helpful. Help the student understand the nuances of C (like why strings are char arrays or how memory allocation works).`,
+CRITICAL: If there are errors (success: false), you MUST provide a full, corrected version of the code in the "correctedCode" field. This version should be properly indented, use idiomatic C patterns, and fix all identified issues.
+
+Be pedantic but helpful.`,
 });
 
 const aiErrorExplanationFlow = ai.defineFlow(
