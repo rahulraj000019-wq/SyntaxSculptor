@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { 
   Play, 
   Trash2, 
@@ -42,6 +42,18 @@ export default function SyntaxSculptorPage() {
   const [errors, setErrors] = useState<CompilerError[]>([]);
   const [aiAnalysis, setAiAnalysis] = useState<AIErrorExplanationOutput | null>(null);
   const [status, setStatus] = useState<'idle' | 'success' | 'failed'>('idle');
+  
+  const scrollAnchorRef = useRef<HTMLDivElement>(null);
+
+  // Automatically scroll to the bottom of the diagnostics panel when compilation finishes or AI analysis updates
+  useEffect(() => {
+    if (status !== 'idle' || isCompiling || aiAnalysis) {
+      const timer = setTimeout(() => {
+        scrollAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [status, isCompiling, aiAnalysis, errors.length]);
 
   const handleCompile = useCallback(async () => {
     setIsCompiling(true);
@@ -271,6 +283,8 @@ export default function SyntaxSculptorPage() {
                   </div>
                 </div>
               )}
+              {/* Invisible anchor used for auto-scrolling */}
+              <div ref={scrollAnchorRef} className="h-px w-full" />
             </ScrollArea>
           </CardContent>
           <CardFooter className="bg-muted/10 border-t p-3">
