@@ -13,8 +13,10 @@ import {
   Sparkles,
   ChevronRight,
   Maximize2,
+  Minimize2,
   Cpu,
-  Wand2
+  Wand2,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -49,6 +51,7 @@ export default function SyntaxSculptorPage() {
   const [errors, setErrors] = useState<any[]>([]);
   const [aiAnalysis, setAiAnalysis] = useState<AIErrorExplanationOutput | null>(null);
   const [status, setStatus] = useState<'idle' | 'success' | 'failed'>('idle');
+  const [isMaximized, setIsMaximized] = useState(false);
   
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
 
@@ -173,13 +176,37 @@ export default function SyntaxSculptorPage() {
             </Badge>
           </div>
           
-          <Card className="flex-1 flex flex-col overflow-hidden border-none shadow-2xl ring-1 ring-black/5 bg-white relative group">
+          {isMaximized && (
+            <div 
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] animate-in fade-in duration-300" 
+              onClick={() => setIsMaximized(false)}
+            />
+          )}
+
+          <Card className={cn(
+            "flex-1 flex flex-col overflow-hidden border-none shadow-2xl ring-1 ring-black/5 bg-white relative group transition-all duration-300",
+            isMaximized ? "fixed inset-4 md:inset-10 z-[101] h-auto" : "h-[650px]"
+          )}>
             <div className="absolute left-0 top-0 bottom-0 w-12 bg-muted/30 border-r flex flex-col items-center pt-6 space-y-3 select-none">
-              {[...Array(20)].map((_, i) => (
+              {[...Array(isMaximized ? 40 : 20)].map((_, i) => (
                 <span key={i} className="text-[10px] font-code text-muted-foreground/50 font-medium">{i + 1}</span>
               ))}
             </div>
-            <CardContent className="flex-1 p-0 pl-12 relative h-[650px]">
+            
+            <div className="absolute right-4 top-4 z-20">
+              {isMaximized && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => setIsMaximized(false)} 
+                  className="hover:bg-destructive/10 hover:text-destructive h-8 w-8 rounded-full"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              )}
+            </div>
+
+            <CardContent className="flex-1 p-0 pl-12 relative h-full">
               <textarea
                 className="w-full h-full p-6 code-editor bg-transparent text-foreground focus:outline-none resize-none text-base leading-relaxed selection:bg-secondary/30"
                 spellCheck={false}
@@ -187,9 +214,17 @@ export default function SyntaxSculptorPage() {
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="// Write any C code here..."
               />
-              <div className="absolute right-4 bottom-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Maximize2 className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-primary" />
-              </div>
+              {!isMaximized && (
+                <div className="absolute right-4 bottom-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Maximize2 
+                    className="h-4 w-4 text-muted-foreground cursor-pointer hover:text-primary" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsMaximized(true);
+                    }}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
