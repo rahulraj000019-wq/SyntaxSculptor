@@ -17,7 +17,9 @@ import {
   Cpu,
   Wand2,
   X,
-  Layers
+  Layers,
+  Save,
+  Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -46,15 +48,33 @@ int main() {
 }
 `;
 
+const CODE_STORAGE_KEY = 'syntaxsculptor-code';
+
+function getInitialCode(): string {
+  if (typeof window === 'undefined') return DEFAULT_CODE;
+  try {
+    const saved = localStorage.getItem(CODE_STORAGE_KEY);
+    if (saved) return saved;
+  } catch (_) {}
+  return DEFAULT_CODE;
+}
+
 export default function SyntaxSculptorPage() {
   const [code, setCode] = useState(DEFAULT_CODE);
+  const [hydrated, setHydrated] = useState(false);
   const [isCompiling, setIsCompiling] = useState(false);
   const [errors, setErrors] = useState<any[]>([]);
   const [aiAnalysis, setAiAnalysis] = useState<AIErrorExplanationOutput | null>(null);
+  const [aiUnavailable, setAiUnavailable] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'failed'>('idle');
   const [isMaximized, setIsMaximized] = useState(false);
   
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setCode(getInitialCode());
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
     if (status !== 'idle' || isCompiling || aiAnalysis) {
@@ -68,6 +88,7 @@ export default function SyntaxSculptorPage() {
   const handleCompile = useCallback(async () => {
     setIsCompiling(true);
     setAiAnalysis(null);
+    setAiUnavailable(false);
     setStatus('idle');
     setErrors([]);
 
@@ -102,6 +123,7 @@ export default function SyntaxSculptorPage() {
       }
     } catch (err) {
       console.error('AI Analysis failed:', err);
+      setAiUnavailable(true);
       if (localErrors.length > 0) {
         setStatus('failed');
         setErrors(localErrors);
@@ -128,7 +150,38 @@ export default function SyntaxSculptorPage() {
     setCode('');
     setErrors([]);
     setAiAnalysis(null);
+    setAiUnavailable(false);
     setStatus('idle');
+  };
+
+  const handleSaveToBrowser = () => {
+    try {
+      localStorage.setItem(CODE_STORAGE_KEY, code);
+      toast({
+        title: 'Saved',
+        description: 'Your code is saved in this browser. It will be here when you return.',
+      });
+    } catch {
+      toast({
+        title: 'Could not save',
+        description: 'Saving to browser storage failed.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDownload = () => {
+    const blob = new Blob([code], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'program.c';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({
+      title: 'Downloaded',
+      description: 'Saved as program.c',
+    });
   };
 
   return (
@@ -150,6 +203,16 @@ export default function SyntaxSculptorPage() {
         </div>
         
         <div className="flex items-center gap-3">
+          {hydrated && (
+            <>
+              <Button variant="ghost" size="sm" onClick={handleSaveToBrowser} className="gap-2 text-muted-foreground hover:text-primary font-semibold" title="Save to this browser">
+                <Save className="h-4 w-4" /> Save
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleDownload} className="gap-2 text-muted-foreground hover:text-primary font-semibold" title="Download as .c file">
+                <Download className="h-4 w-4" /> Download
+              </Button>
+            </>
+          )}
           <Button variant="ghost" size="sm" onClick={handleClear} className="gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/5 font-semibold">
             <Trash2 className="h-4 w-4" /> Reset
           </Button>
@@ -167,6 +230,22 @@ export default function SyntaxSculptorPage() {
           </Button>
         </div>
       </header>
+
+      {aiUnavailable && (
+        <div className="mx-8 mt-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3 animate-in slide-in-from-top-2 duration-300">
+          <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">AI explanations and Magic Fix unavailable</p>
+            <p className="text-xs text-amber-700/90 dark:text-amber-300/90 mt-1">
+              Add <code className="bg-amber-500/20 px-1 rounded font-mono text-[11px]">GEMINI_API_KEY</code> to <code className="bg-amber-500/20 px-1 rounded font-mono text-[11px]">.env.local</code> and restart the dev server. Get a key at{' '}
+              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-amber-900">aistudio.google.com/apikey</a>.
+            </p>
+          </div>
+          <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-amber-700 hover:bg-amber-500/20" onClick={() => setAiUnavailable(false)} aria-label="Dismiss">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
 
       <main className="flex-1 p-8 grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-[1600px] mx-auto w-full">
         
